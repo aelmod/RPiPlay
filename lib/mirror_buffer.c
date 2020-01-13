@@ -12,6 +12,7 @@
  * Lesser General Public License for more details.
  */
 
+#include <stdio.h>
 #include "mirror_buffer.h"
 #include "raop_rtp.h"
 #include "raop_rtp.h"
@@ -22,7 +23,6 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <string.h>
-#include <stdio.h>
 
 //#define DUMP_KEI_IV
 struct mirror_buffer_s {

@@ -1,27 +1,39 @@
 cmake_minimum_required(VERSION 3.4.1)
-include_directories( curve25519 ed25519 playfair plist/plist )
+include_directories(curve25519 ed25519 playfair plist/plist)
 
 aux_source_directory(. play_src)
 set(DIR_SRCS ${play_src})
 
-add_library( airplay
+add_library(airplay
         STATIC
         ${DIR_SRCS}
         )
 
-target_link_libraries( airplay
-	    pthread
+target_link_libraries(airplay
+        ws2_32
+        pthread
         curve25519
         ed25519
         playfair
-        plist )
+        plist)
 
-if( UNIX AND NOT APPLE )
+if (UNIX AND NOT APPLE)
   find_package(OpenSSL REQUIRED)
-  target_link_libraries( airplay OpenSSL::Crypto )
-  target_link_libraries( airplay dns_sd )
-else()
-  include_directories( /usr/local/opt/openssl@1.1/include/ )
-  target_link_libraries( airplay /usr/local/opt/openssl@1.1/lib/libcrypto.a )
-endif()
-        
+  target_link_libraries(airplay OpenSSL::Crypto)
+  target_link_libraries(airplay dns_sd)
+elseif (APPLE)
+  include_directories(/usr/local/opt/openssl@1.1/include/)
+  target_link_libraries(airplay /usr/local/opt/openssl@1.1/lib/libcrypto.a)
+elseif (WIN32)
+#    include_directories("C:/Program Files/OpenSSL-Win64/include")
+#    link_directories("C:/Program Files/OpenSSL-Win64/lib")
+  include_directories("C:/openssl-1.1.1d-win32-mingw/include")
+#  link_directories("C:/openssl-1.1.1d-win64-mingw/lib")
+
+#  find_package(OpenSSL REQUIRED)
+
+#  target_link_libraries(airplay "C:/openssl-1.1.1d-win32-mingw/lib/libssl.a")
+  target_link_libraries(airplay "C:/openssl-1.1.1d-win32-mingw/lib/libcrypto.dll.a")
+#  target_link_libraries(airplay dns_sd)
+  target_link_libraries(airplay "C:/Program Files/Bonjour SDK/Lib/Win32/dnssd.lib")
+endif ()

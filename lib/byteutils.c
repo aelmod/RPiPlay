@@ -13,13 +13,17 @@
  */
 
 #include <time.h>
-#include <netinet/in.h>
+//#include <netinet/in.h>
+#include <winsock.h>
+#include <stdlib.h>
 #include "byteutils.h"
 
 #ifndef htonll
-#include <endian.h>
+//#include <endian.h>
 #define htonll(x) htobe64(x)
-#define ntohll(x) be64toh(x)
+//#define ntohll(x) _byteswap_uint64(x)
+//#define ntohll(x) _byteswap_uint64(x)
+#define ntohll(x) ((1==ntohl(1)) ? (x) : (((uint64_t)ntohl((x) & 0xFFFFFFFFUL)) << 32) | ntohl((uint32_t)((x) >> 32)))
 #endif
 
 // The functions in this file assume a little endian cpu architecture!
@@ -28,7 +32,7 @@
  * Reads a little endian unsigned 16 bit integer from the buffer at position offset
  */
 uint16_t byteutils_get_short(unsigned char* b, int offset) {
-    return *((uint16_t*)(b + offset));
+  return *((uint16_t*)(b + offset));
 }
 
 /**

@@ -44,6 +44,7 @@ void video_renderer_start(video_renderer_t *renderer) {
 }
 
 void video_renderer_render_buffer(video_renderer_t *renderer, raop_ntp_t *ntp, unsigned char* data, int data_len, uint64_t pts, int type) {
+
 }
 
 void video_renderer_flush(video_renderer_t *renderer) {

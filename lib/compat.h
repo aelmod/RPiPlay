@@ -16,6 +16,7 @@
 #define COMPAT_H
 
 #if defined(WIN32)
+#define _WIN32_WINNT 0x0501
 #include <ws2tcpip.h>
 #include <windows.h>
 #ifndef snprintf
