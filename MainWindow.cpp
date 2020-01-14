@@ -2,6 +2,7 @@
 #include "Globals.h"
 #include "MainWindow.h"
 #include "res/Resource.h"
+#include "rpiplay.h"
 
 /* Main window class and title */
 static LPCTSTR MainWndClass = TEXT("Win32 Example Application");
@@ -92,12 +93,11 @@ BOOL RegisterMainWindowClass()
   return (RegisterClassEx(&wc)) ? TRUE : FALSE;
 }
 
-HWND hWnd;
 /* Create an instance of our main window */
 HWND CreateMainWindow()
 {
   /* Create instance of main window */
-  hWnd = CreateWindowEx(0, MainWndClass, MainWndClass, WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, 640, 480,
+  HWND hWnd = CreateWindowEx(0, MainWndClass, MainWndClass, WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, 828, 1792,
                              NULL, NULL, g_hInstance, NULL);
 
   if (hWnd)
@@ -106,6 +106,8 @@ HWND CreateMainWindow()
     HMENU hSysMenu = GetSystemMenu(hWnd, FALSE);
     InsertMenu(hSysMenu, 5, MF_BYPOSITION | MF_SEPARATOR, 0, NULL);
     InsertMenu(hSysMenu, 6, MF_BYPOSITION, ID_HELP_ABOUT, TEXT("About"));
+
+    run(NULL, nullptr, hWnd);
   }
 
   return hWnd;

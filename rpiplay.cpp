@@ -25,6 +25,7 @@
 #include <vector>
 #include <fstream>
 #include <iostream>
+#include <windef.h>
 
 #include "log.h"
 #include "lib/raop.h"
@@ -33,6 +34,7 @@
 #include "lib/dnssd.h"
 #include "renderers/video_renderer.h"
 #include "renderers/audio_renderer.h"
+#include "rpiplay.h"
 
 #define VERSION "1.2"
 
@@ -44,7 +46,7 @@
 #define DEFAULT_HW_ADDRESS { (char) 0x48, (char) 0x5d, (char) 0x60, (char) 0x7c, (char) 0xee, (char) 0x22 }
 
 int start_server(std::vector<char> hw_addr, std::string name, background_mode_t background_mode,
-                 audio_device_t audio_device, bool low_latency, bool debug_log);
+                 audio_device_t audio_device, bool low_latency, bool debug_log, HWND hwnd);
 
 int stop_server();
 
@@ -54,8 +56,7 @@ static raop_t *raop = NULL;
 static video_renderer_t *video_renderer = NULL;
 static audio_renderer_t *audio_renderer = NULL;
 
-static void signal_handler(int sig)
-{
+static void signal_handler(int sig) {
   switch (sig) {
     case SIGINT:
     case SIGTERM:
@@ -64,29 +65,26 @@ static void signal_handler(int sig)
   }
 }
 
-static void init_signals(void)
-{
-//    struct sigaction sigact;
+static void init_signals(void) {
+//  struct sigaction sigact;
 //
-//    sigact.sa_handler = signal_handler;
-//    sigemptyset(&sigact.sa_mask);
-//    sigact.sa_flags = 0;
-//    sigaction(SIGINT, &sigact, NULL);
-//    sigaction(SIGTERM, &sigact, NULL);
-  signal(SIGINT, [](int signal) { std::cout << &"signal: "[signal] << std::endl; });
-  signal(SIGTERM, [](int signal) { std::cout << &"signal: "[signal] << std::endl; });
+//  sigact.sa_handler = signal_handler;
+//  sigemptyset(&sigact.sa_mask);
+//  sigact.sa_flags = 0;
+//  sigaction(SIGINT, &sigact, NULL);
+//  sigaction(SIGTERM, &sigact, NULL);
+  signal(SIGINT, [](int signal){ std::cout << &"signal: " [ signal] << std::endl; });
+  signal(SIGTERM, [](int signal){ std::cout << &"signal: " [ signal] << std::endl; });
 }
 
-static int parse_hw_addr(std::string str, std::vector<char> &hw_addr)
-{
+static int parse_hw_addr(std::string str, std::vector<char> &hw_addr) {
   for (int i = 0; i < str.length(); i += 3) {
     hw_addr.push_back((char) stol(str.substr(i), NULL, 16));
   }
   return 0;
 }
 
-std::string find_mac()
-{
+std::string find_mac() {
   std::ifstream iface_stream("/sys/class/net/eth0/address");
   if (!iface_stream) {
     iface_stream.open("/sys/class/net/wlan0/address");
@@ -99,8 +97,7 @@ std::string find_mac()
   return mac_address;
 }
 
-void print_info(char *name)
-{
+void print_info(char *name) {
   printf("RPiPlay %s: An open-source AirPlay mirroring server for Raspberry Pi\n", VERSION);
   printf("Usage: %s [-b (on|auto|off)] [-n name] [-a (hdmi|analog|off)]\n", name);
   printf("Options:\n");
@@ -111,43 +108,10 @@ void print_info(char *name)
   printf("-d                    Enable debug logging\n");
   printf("-v/-h                 Displays this help and version information\n");
 }
-
-#include <windows.h>
-#include <windowsx.h>
-
-#include <windows.h>
-
-INT WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, INT nCmdShow)
-{
-  MessageBox(NULL, "Title", "Message", MB_OKCANCEL);
-  return 0;
+int main(int argc, char *argv[]) {
+  run(0,0,0);
 }
-
-LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
-// the entry point for any Windows program
-INT WINAPI WinMallin(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, INT nCmdShow)
-//int WINAPI WinMain(HINSTANCE hInstance,
-//                   HINSTANCE hPrevInstance,
-//                   LPSTR lpCmdLine,
-//                   int nCmdShow)
-{
-
-}
-// this is the main message handler for the program
-LRESULT CALLBACK WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
-{
-  switch (message) {
-    case WM_DESTROY: {
-      PostQuitMessage(0);
-      return 0;
-    }
-      break;
-  }
-  return DefWindowProc(hWnd, message, wParam, lParam);
-}
-
-int main(int argc, char *argv[])
-{
+int run(int argc, char *argv[], HWND hwnd) {
   init_signals();
 
   background_mode_t background = DEFAULT_BACKGROUND_MODE;
@@ -196,7 +160,7 @@ int main(int argc, char *argv[])
     parse_hw_addr(mac_address, server_hw_addr);
   }
 
-  if (start_server(server_hw_addr, server_name, background, audio_device, low_latency, debug_log) != 0) {
+  if (start_server(server_hw_addr, server_name, background, audio_device, low_latency, debug_log, hwnd) != 0) {
     return 1;
   }
 
@@ -210,47 +174,39 @@ int main(int argc, char *argv[])
 }
 
 // Server callbacks
-extern "C" void conn_init(void *cls)
-{
+extern "C" void conn_init(void *cls) {
   video_renderer_update_background(video_renderer, 1);
 }
 
-extern "C" void conn_destroy(void *cls)
-{
+extern "C" void conn_destroy(void *cls) {
   video_renderer_update_background(video_renderer, -1);
 }
 
-extern "C" void audio_process(void *cls, raop_ntp_t *ntp, aac_decode_struct *data)
-{
+extern "C" void audio_process(void *cls, raop_ntp_t *ntp, aac_decode_struct *data) {
   if (audio_renderer != NULL) {
     audio_renderer_render_buffer(audio_renderer, ntp, data->data, data->data_len, data->pts);
   }
 }
 
-extern "C" void video_process(void *cls, raop_ntp_t *ntp, h264_decode_struct *data)
-{
+extern "C" void video_process(void *cls, raop_ntp_t *ntp, h264_decode_struct *data) {
   video_renderer_render_buffer(video_renderer, ntp, data->data, data->data_len, data->pts, data->frame_type);
 }
 
-extern "C" void audio_flush(void *cls)
-{
+extern "C" void audio_flush(void *cls) {
   audio_renderer_flush(audio_renderer);
 }
 
-extern "C" void video_flush(void *cls)
-{
+extern "C" void video_flush(void *cls) {
   video_renderer_flush(video_renderer);
 }
 
-extern "C" void audio_set_volume(void *cls, float volume)
-{
+extern "C" void audio_set_volume(void *cls, float volume) {
   if (audio_renderer != NULL) {
     audio_renderer_set_volume(audio_renderer, volume);
   }
 }
 
-extern "C" void log_callback(void *cls, int level, const char *msg)
-{
+extern "C" void log_callback(void *cls, int level, const char *msg) {
   switch (level) {
     case LOGGER_DEBUG: {
       LOGD("%s", msg);
@@ -275,8 +231,7 @@ extern "C" void log_callback(void *cls, int level, const char *msg)
 }
 
 int start_server(std::vector<char> hw_addr, std::string name, background_mode_t background_mode,
-                 audio_device_t audio_device, bool low_latency, bool debug_log)
-{
+                 audio_device_t audio_device, bool low_latency, bool debug_log, HWND hwnd) {
   raop_callbacks_t raop_cbs;
   memset(&raop_cbs, 0, sizeof(raop_cbs));
   raop_cbs.conn_init = conn_init;
@@ -302,46 +257,7 @@ int start_server(std::vector<char> hw_addr, std::string name, background_mode_t 
 
   if (low_latency) logger_log(render_logger, LOGGER_INFO, "Using low-latency mode");
 
-  auto hInstance = (HINSTANCE) GetModuleHandle(NULL);
-  HWND hWnd;
-  WNDCLASSEX wc;
-  ZeroMemory(&wc, sizeof(WNDCLASSEX));
-  wc.cbSize = sizeof(WNDCLASSEX);
-  wc.style = CS_HREDRAW | CS_VREDRAW;
-  wc.lpfnWndProc = WindowProc;
-  wc.hInstance = hInstance;
-  wc.hCursor = LoadCursor(NULL, IDC_ARROW);
-  wc.hbrBackground = (HBRUSH) COLOR_WINDOW;
-  wc.lpszClassName = "WindowClass";
-  RegisterClassEx(&wc);
-  hWnd = CreateWindowEx(NULL,
-                        "WindowClass",
-                        "Our First Direct3D Program",
-                        WS_OVERLAPPEDWINDOW,
-                        300, 300,
-                        800, 600,
-                        NULL,
-                        NULL,
-                        hInstance,
-                        NULL);
-  ShowWindow(hWnd, 0);
-  // set up and initialize Direct3D
-  // enter the main loop:
-  MSG msg;
-  while(TRUE)
-  {
-    while(PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
-    {
-      TranslateMessage(&msg);
-      DispatchMessage(&msg);
-    }
-    if(msg.message == WM_QUIT)
-      break;
-  }
-  // clean up DirectX and COM
-  return msg.wParam;
-
-  if ((video_renderer = video_renderer_init(render_logger, background_mode, low_latency)) == NULL) {
+  if ((video_renderer = video_renderer_init(render_logger, background_mode, low_latency, hwnd)) == NULL) {
     LOGE("Could not init video renderer");
     return -1;
   }
@@ -376,8 +292,7 @@ int start_server(std::vector<char> hw_addr, std::string name, background_mode_t 
   return 0;
 }
 
-int stop_server()
-{
+int stop_server() {
   raop_destroy(raop);
   dnssd_unregister_raop(dnssd);
   dnssd_unregister_airplay(dnssd);

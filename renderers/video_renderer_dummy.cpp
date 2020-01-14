@@ -31,8 +31,21 @@ struct video_renderer_s {
     logger_t *logger;
 };
 
-video_renderer_t *video_renderer_init(logger_t *logger, background_mode_t background_mode, bool low_latency)
+static const int width = 100;
+static const int height = 100;
+static const int bitsPerPixel = 8;
+//static const int width = 828;
+//static const int height = 1792;
+//static const int bitsPerPixel = 32;
+
+void alloc(const int width, const int height, const int bitsPerPixel);
+
+HWND _hwnd;
+video_renderer_t *video_renderer_init(logger_t *logger, background_mode_t background_mode, bool low_latency, HWND hwnd)
 {
+  _hwnd = hwnd;
+  alloc(width, height, bitsPerPixel);
+
   video_renderer_t *renderer;
   renderer = static_cast<video_renderer_t *>(calloc(1, sizeof(video_renderer_t)));
   if (!renderer) {
@@ -44,14 +57,14 @@ video_renderer_t *video_renderer_init(logger_t *logger, background_mode_t backgr
 
 HBITMAP m_hBitmap = 0;
 BITMAP m_bitmap = {0};
-UINT *m_bitmapPixels = 0;
+unsigned char *m_bitmapPixels = 0;
 
 void alloc(const int width, const int height, const int bitsPerPixel)
 {
   if (!width || !height || !bitsPerPixel)
     return;
 
-  BITMAPINFO bmpInfo = { 0 };
+  BITMAPINFO bmpInfo = {0};
   bmpInfo.bmiHeader.biBitCount = bitsPerPixel;
   bmpInfo.bmiHeader.biHeight = -int(height);
   bmpInfo.bmiHeader.biWidth = width;
@@ -74,10 +87,11 @@ void alloc(const int width, const int height, const int bitsPerPixel)
 
 void dealloc()
 {
-DeleteObject(m_hBitmap);
+  DeleteObject(m_hBitmap);
 }
 
-void video_renderer_start(video_renderer_t *renderer) {
+void video_renderer_start(video_renderer_t *renderer)
+{
 }
 
 //UINT *m_bitmapPixels = 0;
@@ -90,40 +104,37 @@ void copyRfbPixelsToBitmap(const UINT uWidth, const UINT uHeight, const UINT uBi
 void video_renderer_render_buffer(video_renderer_t *renderer, raop_ntp_t *ntp, unsigned char *data, int data_len,
                                   uint64_t pts, int type)
 {
+  if (data_len == 0) return;
+
   PAINTSTRUCT ps;
-//  auto hdc = BeginPaint(pHinstance, &ps);
-//
-//  const HDC dc = CreateCompatibleDC(NULL);
-//
-//  if (!dc) {
-//    wchar_t buffer[256];
-//    wsprintfW(buffer, L"CreateCompatibleDC %d\n", GetLastError());
-//    OutputDebugString(buffer);
-//    return;
-//  }
-//
-  copyRfbPixelsToBitmap(828, 1792, 32, data);
-//
-//  if (!SelectObject(dc, m_hBitmap)) {
-//    wchar_t buffer[256];
-//    wsprintfW(buffer, L"SelectObject %d\n", GetLastError());
-//    OutputDebugString(buffer);
-//  }
-//
-//  if (!BitBlt(hdc, 0, 0, 1792, 828, dc, 0, 0, SRCCOPY)) {
-//    //	// If the desktop we're rendering to is inactive (like when the screen
-//    //	// is locked or the UAC is active), then GDI calls will randomly fail.
-//    //	// This is completely undocumented so we have no idea how best to deal
-//    //	// with it. For now, we've only seen this error and for this function
-//    //	// so only ignore this combination.
-//    if (GetLastError() != ERROR_INVALID_HANDLE) {
-//      wchar_t buffer[256];
-//      wsprintfW(buffer, L"BitBlt %d\n", GetLastError());
-//      OutputDebugString(buffer);
-//    }
-//  }
-//
-//  DeleteDC(dc);
+  auto hdc = BeginPaint(_hwnd, &ps);
+
+  const HDC dc = CreateCompatibleDC(hdc);
+
+  if (!dc) {
+    printf("CreateCompatibleDC %lu\n", GetLastError());
+    return;
+  }
+
+//  copyRfbPixelsToBitmap(width, height, 8, data);
+  memcpy(m_bitmapPixels, data, data_len);
+
+  if (!SelectObject(dc, m_hBitmap)) {
+    printf("SelectObject %lu\n", GetLastError());
+  }
+
+  if (!BitBlt(hdc, 0, 0, width, height, dc, 0, 0, SRCCOPY)) {
+    //	// If the desktop we're rendering to is inactive (like when the screen
+    //	// is locked or the UAC is active), then GDI calls will randomly fail.
+    //	// This is completely undocumented so we have no idea how best to deal
+    //	// with it. For now, we've only seen this error and for this function
+    //	// so only ignore this combination.
+    if (GetLastError() != ERROR_INVALID_HANDLE) {
+      printf("BitBlt %lu\n", GetLastError());
+    }
+  }
+
+  DeleteDC(dc);
 }
 
 void video_renderer_flush(video_renderer_t *renderer)
