@@ -25,15 +25,8 @@ elseif (APPLE)
   include_directories(/usr/local/opt/openssl@1.1/include/)
   target_link_libraries(airplay /usr/local/opt/openssl@1.1/lib/libcrypto.a)
 elseif (WIN32)
-#    include_directories("C:/Program Files/OpenSSL-Win64/include")
-#    link_directories("C:/Program Files/OpenSSL-Win64/lib")
   include_directories("C:/openssl-1.1.1d-win32-mingw/include")
-#  link_directories("C:/openssl-1.1.1d-win64-mingw/lib")
-
-#  find_package(OpenSSL REQUIRED)
-
-#  target_link_libraries(airplay "C:/openssl-1.1.1d-win32-mingw/lib/libssl.a")
   target_link_libraries(airplay "C:/openssl-1.1.1d-win32-mingw/lib/libcrypto.dll.a")
-#  target_link_libraries(airplay dns_sd)
+
   target_link_libraries(airplay "C:/Program Files/Bonjour SDK/Lib/Win32/dnssd.lib")
 endif ()
