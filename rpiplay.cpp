@@ -24,10 +24,6 @@
 #include <string>
 #include <vector>
 #include <fstream>
-#include <iostream>
-#include <windef.h>
-#include <pbt.h>
-#include <winuser.h>
 
 #include "log.h"
 #include "lib/raop.h"
@@ -36,7 +32,6 @@
 #include "lib/dnssd.h"
 #include "renderers/video_renderer.h"
 #include "renderers/audio_renderer.h"
-#include "rpiplay.h"
 
 #define VERSION "1.2"
 
@@ -48,7 +43,7 @@
 #define DEFAULT_HW_ADDRESS { (char) 0x48, (char) 0x5d, (char) 0x60, (char) 0x7c, (char) 0xee, (char) 0x22 }
 
 int start_server(std::vector<char> hw_addr, std::string name, background_mode_t background_mode,
-                 audio_device_t audio_device, bool low_latency, bool debug_log, HWND hwnd);
+                 audio_device_t audio_device, bool low_latency, bool debug_log);
 
 int stop_server();
 
@@ -75,8 +70,8 @@ static void init_signals(void) {
 //  sigact.sa_flags = 0;
 //  sigaction(SIGINT, &sigact, NULL);
 //  sigaction(SIGTERM, &sigact, NULL);
-  signal(SIGINT, [](int signal){ std::cout << &"signal: " [ signal] << std::endl; });
-  signal(SIGTERM, [](int signal){ std::cout << &"signal: " [ signal] << std::endl; });
+  signal(SIGINT, [](int signal){ });
+  signal(SIGTERM, [](int signal){ });
 }
 
 static int parse_hw_addr(std::string str, std::vector<char> &hw_addr) {
@@ -110,13 +105,8 @@ void print_info(char *name) {
   printf("-d                    Enable debug logging\n");
   printf("-v/-h                 Displays this help and version information\n");
 }
-int main(int argc, char *argv[]) {
-  run(0,0,0);
-}
-HWND _hwnd;
-int run(int argc, char *argv[], HWND hwnd) {
-  _hwnd = hwnd;
 
+int main(int argc, char *argv[]) {
   init_signals();
 
   background_mode_t background = DEFAULT_BACKGROUND_MODE;
@@ -165,18 +155,17 @@ int run(int argc, char *argv[], HWND hwnd) {
     parse_hw_addr(mac_address, server_hw_addr);
   }
 
-  if (start_server(server_hw_addr, server_name, background, audio_device, low_latency, debug_log, hwnd) != 0) {
+  if (start_server(server_hw_addr, server_name, background, audio_device, low_latency, debug_log) != 0) {
     return 1;
   }
 
-  std::cin.peek();
-//  running = true;
-//  while (running) {
-//    sleep(1);
-//  }
-//
-//  LOGI("Stopping...");
-//  stop_server();
+  running = true;
+  while (running) {
+    sleep(1);
+  }
+
+  LOGI("Stopping...");
+  stop_server();
 }
 
 // Server callbacks
@@ -195,8 +184,7 @@ extern "C" void audio_process(void *cls, raop_ntp_t *ntp, aac_decode_struct *dat
 }
 
 extern "C" void video_process(void *cls, raop_ntp_t *ntp, h264_decode_struct *data) {
-  PostMessage(_hwnd, 0x0400 + 0x0001, reinterpret_cast<WPARAM> (data), 0);
-//  video_renderer_render_buffer(video_renderer, ntp, data->data, data->data_len, data->pts, data->frame_type);
+  video_renderer_render_buffer(video_renderer, ntp, data->data, data->data_len, data->pts, data->frame_type);
 }
 
 extern "C" void audio_flush(void *cls) {
@@ -238,7 +226,7 @@ extern "C" void log_callback(void *cls, int level, const char *msg) {
 }
 
 int start_server(std::vector<char> hw_addr, std::string name, background_mode_t background_mode,
-                 audio_device_t audio_device, bool low_latency, bool debug_log, HWND hwnd) {
+                 audio_device_t audio_device, bool low_latency, bool debug_log) {
   raop_callbacks_t raop_cbs;
   memset(&raop_cbs, 0, sizeof(raop_cbs));
   raop_cbs.conn_init = conn_init;
@@ -264,7 +252,7 @@ int start_server(std::vector<char> hw_addr, std::string name, background_mode_t 
 
   if (low_latency) logger_log(render_logger, LOGGER_INFO, "Using low-latency mode");
 
-  if ((video_renderer = video_renderer_init(render_logger, background_mode, low_latency, hwnd)) == NULL) {
+  if ((video_renderer = video_renderer_init(render_logger, background_mode, low_latency)) == NULL) {
     LOGE("Could not init video renderer");
     return -1;
   }
