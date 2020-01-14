@@ -20,6 +20,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
+#include <pthread_time.h>
+#include <sys/time.h>
 
 #include "raop_ntp.h"
 #include "threads.h"

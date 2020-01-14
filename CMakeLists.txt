@@ -7,6 +7,8 @@ set (CMAKE_CXX_STANDARD 17)
 #set(_WIN32_IE 0x0500)
 #set(WINVER 0x0500)
 
+SET(CMAKE_CXX_FLAGS_DEBUG  "-O0 -g")
+
 add_subdirectory(lib/curve25519)
 add_subdirectory(lib/ed25519)
 add_subdirectory(lib/playfair)
