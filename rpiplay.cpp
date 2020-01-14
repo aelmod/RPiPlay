@@ -26,6 +26,8 @@
 #include <fstream>
 #include <iostream>
 #include <windef.h>
+#include <pbt.h>
+#include <winuser.h>
 
 #include "log.h"
 #include "lib/raop.h"
@@ -111,7 +113,10 @@ void print_info(char *name) {
 int main(int argc, char *argv[]) {
   run(0,0,0);
 }
+HWND _hwnd;
 int run(int argc, char *argv[], HWND hwnd) {
+  _hwnd = hwnd;
+
   init_signals();
 
   background_mode_t background = DEFAULT_BACKGROUND_MODE;
@@ -164,13 +169,14 @@ int run(int argc, char *argv[], HWND hwnd) {
     return 1;
   }
 
-  running = true;
-  while (running) {
-    sleep(1);
-  }
-
-  LOGI("Stopping...");
-  stop_server();
+  std::cin.peek();
+//  running = true;
+//  while (running) {
+//    sleep(1);
+//  }
+//
+//  LOGI("Stopping...");
+//  stop_server();
 }
 
 // Server callbacks
@@ -189,7 +195,8 @@ extern "C" void audio_process(void *cls, raop_ntp_t *ntp, aac_decode_struct *dat
 }
 
 extern "C" void video_process(void *cls, raop_ntp_t *ntp, h264_decode_struct *data) {
-  video_renderer_render_buffer(video_renderer, ntp, data->data, data->data_len, data->pts, data->frame_type);
+  PostMessage(_hwnd, 0x0400 + 0x0001, reinterpret_cast<WPARAM> (data), 0);
+//  video_renderer_render_buffer(video_renderer, ntp, data->data, data->data_len, data->pts, data->frame_type);
 }
 
 extern "C" void audio_flush(void *cls) {
