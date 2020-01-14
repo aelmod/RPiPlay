@@ -3,6 +3,9 @@ cmake_minimum_required(VERSION 3.4.1)
 project(rpiplay)
 
 set (CMAKE_CXX_STANDARD 11)
+#CMAKE_POLICY(SET CMP0020 NEW)
+set(_WIN32_IE 0x0500)
+set(WINVER 0x0500)
 
 add_subdirectory(lib/curve25519)
 add_subdirectory(lib/ed25519)
@@ -11,5 +14,8 @@ add_subdirectory(lib/plist)
 add_subdirectory(lib)
 add_subdirectory(renderers)
 
-add_executable( rpiplay rpiplay.cpp)
-target_link_libraries ( rpiplay renderers airplay )
+add_executable( rpiplay #[[rpiplay.cpp]]
+        MainWindow.h MainWindow.cpp Globals.h WinMain.cpp AboutDialog.h AboutDialog.cpp
+        res/Resource.h res/Resource.rc res/Application.manifest res/Application.ico)
+#set_target_properties(rpiplay PROPERTIES LINK_FLAGS "-mwindows")
+target_link_libraries ( rpiplay renderers airplay -s -lcomctl32 -Wl,--subsystem,windows)

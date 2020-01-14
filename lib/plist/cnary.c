@@ -25,7 +25,7 @@
 
 #include "node.h"
 
-int main(int argc, char* argv[]) {
+int mauin(int argc, char* argv[]) {
 	puts("Creating root node");
 	node_t* root = node_create(NULL, NULL);
 
