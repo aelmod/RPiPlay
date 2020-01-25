@@ -171,8 +171,8 @@ int main(int argc, char *argv[])
   ptrFile.open ("pointers.txt");
   ptrFile << static_cast<void*>(sharedDataLen) << "\n";
   ptrFile << static_cast<void*>(sharedData) << "\n";
-  ptrFile << static_cast<void*>(frameType) << "\n";
-  ptrFile << static_cast<void*>(sharedPTS);
+  ptrFile << static_cast<void *>(frameType) << "\n";
+  ptrFile << static_cast<void *>(sharedPTS) << "\n";
   ptrFile.close();
 
   init_signals();
@@ -263,6 +263,7 @@ extern "C" void video_process(void *cls, raop_ntp_t *ntp, h264_decode_struct *da
   *frameType = data->frame_type;
   *sharedPTS = data->pts;
   memcpy(sharedData, data->data, data->data_len);
+
 
   video_renderer_render_buffer(video_renderer, ntp, data->data, data->data_len, data->pts, data->frame_type);
 }
