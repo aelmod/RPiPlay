@@ -41,9 +41,32 @@ cmake_minimum_required(VERSION 3.4.1)
 #          audio_renderer_rpi.c video_renderer_rpi.c)
 #  target_link_libraries ( renderers ilclient airplay fdk-aac h264-bitstream )
 #else()
-  add_subdirectory( h264-bitstream )
-  add_library( renderers
-          STATIC
-          audio_renderer_dummy.c video_renderer_dummy.c)
-  target_link_libraries ( renderers h264-bitstream gdi32 )
+
+
+#include_directories("C:/ffmpeg-4.2.1-win32-dev/include")
+#link_directories("C:/ffmpeg-4.2.1-win32-dev/lib")
+#
+#add_executable(decode_video decode_video.c)
+#target_link_libraries(decode_video avcodec avutil)
+#
+#add_executable(encode_video encode_video.c)
+#target_link_libraries(encode_video avcodec avutil)
+#
+#add_executable(stream stream.cpp)
+#target_link_libraries(stream avcodec avutil avformat swscale)
+#
+#include_directories("C:/SDL2-2.0.10/i686-w64-mingw32/include")
+#link_directories("C:/SDL2-2.0.10/i686-w64-mingw32/lib")
+#add_executable(player player.cpp)
+#target_link_libraries(player avcodec avutil avformat swscale mingw32 SDL2main SDL2)
+#
+#add_executable(player2 player2.cpp)
+#target_link_libraries(player2 avcodec avutil avformat swscale mingw32 SDL2main SDL2)
+
+add_subdirectory(h264-bitstream)
+add_library(renderers
+        STATIC
+        audio_renderer_dummy.c video_renderer_dummy.c #[[decode_video.c]])
+target_link_libraries(renderers h264-bitstream)
+
 #endif()

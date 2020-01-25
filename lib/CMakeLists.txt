@@ -29,4 +29,9 @@ elseif (WIN32)
   target_link_libraries(airplay "C:/openssl-1.1.1d-win32-mingw/lib/libcrypto.dll.a")
 
   target_link_libraries(airplay "C:/Program Files/Bonjour SDK/Lib/Win32/dnssd.lib")
+
+  include_directories("C:/ffmpeg-4.2.1-win32-dev/include")
+  target_link_directories(airplay PUBLIC "C:/ffmpeg-4.2.1-win32-dev/lib")
+
+  target_link_libraries(airplay avcodec avutil avformat swscale)
 endif ()

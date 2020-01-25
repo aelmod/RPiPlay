@@ -21,7 +21,7 @@
 #include <cstring>
 #include <signal.h>
 #include <unistd.h>
-#include <string>
+//#include <string>
 #include <vector>
 #include <fstream>
 
@@ -53,35 +53,32 @@ static raop_t *raop = NULL;
 static video_renderer_t *video_renderer = NULL;
 static audio_renderer_t *audio_renderer = NULL;
 
-static void signal_handler(int sig) {
+static void signal_handler(int sig)
+{
   switch (sig) {
     case SIGINT:
     case SIGTERM:
-      running = 0;
+      running = false;
       break;
   }
 }
 
-static void init_signals(void) {
-//  struct sigaction sigact;
-//
-//  sigact.sa_handler = signal_handler;
-//  sigemptyset(&sigact.sa_mask);
-//  sigact.sa_flags = 0;
-//  sigaction(SIGINT, &sigact, NULL);
-//  sigaction(SIGTERM, &sigact, NULL);
-  signal(SIGINT, [](int signal){ });
-  signal(SIGTERM, [](int signal){ });
+static void init_signals()
+{
+  signal(SIGINT, signal_handler);
+  signal(SIGTERM, signal_handler);
 }
 
-static int parse_hw_addr(std::string str, std::vector<char> &hw_addr) {
+static int parse_hw_addr(std::string str, std::vector<char> &hw_addr)
+{
   for (int i = 0; i < str.length(); i += 3) {
     hw_addr.push_back((char) stol(str.substr(i), NULL, 16));
   }
   return 0;
 }
 
-std::string find_mac() {
+std::string find_mac()
+{
   std::ifstream iface_stream("/sys/class/net/eth0/address");
   if (!iface_stream) {
     iface_stream.open("/sys/class/net/wlan0/address");
@@ -94,7 +91,8 @@ std::string find_mac() {
   return mac_address;
 }
 
-void print_info(char *name) {
+void print_info(char *name)
+{
   printf("RPiPlay %s: An open-source AirPlay mirroring server for Raspberry Pi\n", VERSION);
   printf("Usage: %s [-b (on|auto|off)] [-n name] [-a (hdmi|analog|off)]\n", name);
   printf("Options:\n");
@@ -106,7 +104,74 @@ void print_info(char *name) {
   printf("-v/-h                 Displays this help and version information\n");
 }
 
-int main(int argc, char *argv[]) {
+#include <windows.h>
+#include <iostream>
+
+HWND GetConsoleHwnd()
+{
+#define MY_BUFSIZE 1024 // Buffer size for console window titles.
+  HWND hwndFound;         // This is what is returned to the caller.
+  char pszNewWindowTitle[MY_BUFSIZE]; // Contains fabricated
+  // WindowTitle.
+  char pszOldWindowTitle[MY_BUFSIZE]; // Contains original
+  // WindowTitle.
+
+  // Fetch current window title.
+
+  GetConsoleTitle(pszOldWindowTitle, MY_BUFSIZE);
+
+  // Format a "unique" NewWindowTitle.
+
+  wsprintf(pszNewWindowTitle, "%d/%d",
+           GetTickCount(),
+           GetCurrentProcessId());
+
+//  wsprintf(pszNewWindowTitle, "rpiplay");
+
+  printf("pszOldWindowTitle: %s\n", pszOldWindowTitle);
+  printf("pszNewWindowTitle: %s\n", pszNewWindowTitle);
+  // Change current window title.
+
+  SetConsoleTitle(pszNewWindowTitle);
+
+  // Ensure window title has been updated.
+
+  Sleep(40);
+
+  // Look for NewWindowTitle.
+
+  hwndFound = FindWindow(NULL, pszNewWindowTitle);
+
+  // Restore original window title.
+
+//  SetConsoleTitle(pszOldWindowTitle);
+
+  return (hwndFound);
+}
+
+static unsigned char *sharedData;
+static int *sharedDataLen;
+static int *frameType;
+
+int main(int argc, char *argv[])
+{
+//  GetConsoleHwnd();
+
+  sharedData = (unsigned char *) malloc(200000);
+  sharedDataLen = new int(-1);
+  frameType = new int(-1);
+
+  std::cout << "sharedDataLen ptr: " << static_cast<void*>(sharedDataLen) << std::endl;
+  std::cout << "sharedData ptr: " << static_cast<void*>(sharedData) << std::endl;
+  std::cout << "frameType ptr: " << static_cast<void*>(frameType) << std::endl;
+
+  std::ofstream ptrFile;
+  ptrFile.open ("pointers.txt");
+  ptrFile << static_cast<void*>(sharedDataLen) << "\n";
+  ptrFile << static_cast<void*>(sharedData) << "\n";
+  ptrFile << static_cast<void*>(frameType);
+  ptrFile.close();
+
   init_signals();
 
   background_mode_t background = DEFAULT_BACKGROUND_MODE;
@@ -160,6 +225,7 @@ int main(int argc, char *argv[]) {
   }
 
   running = true;
+
   while (running) {
     sleep(1);
   }
@@ -169,39 +235,53 @@ int main(int argc, char *argv[]) {
 }
 
 // Server callbacks
-extern "C" void conn_init(void *cls) {
+extern "C" void conn_init(void *cls)
+{
   video_renderer_update_background(video_renderer, 1);
 }
 
-extern "C" void conn_destroy(void *cls) {
+extern "C" void conn_destroy(void *cls)
+{
+  *sharedDataLen = -1;
+  *frameType = -1;
   video_renderer_update_background(video_renderer, -1);
 }
 
-extern "C" void audio_process(void *cls, raop_ntp_t *ntp, aac_decode_struct *data) {
+extern "C" void audio_process(void *cls, raop_ntp_t *ntp, aac_decode_struct *data)
+{
   if (audio_renderer != NULL) {
     audio_renderer_render_buffer(audio_renderer, ntp, data->data, data->data_len, data->pts);
   }
 }
 
-extern "C" void video_process(void *cls, raop_ntp_t *ntp, h264_decode_struct *data) {
+extern "C" void video_process(void *cls, raop_ntp_t *ntp, h264_decode_struct *data)
+{
+  *sharedDataLen = data->data_len;
+  *frameType = data->frame_type;
+  memcpy(sharedData, data->data, data->data_len);
+
   video_renderer_render_buffer(video_renderer, ntp, data->data, data->data_len, data->pts, data->frame_type);
 }
 
-extern "C" void audio_flush(void *cls) {
+extern "C" void audio_flush(void *cls)
+{
   audio_renderer_flush(audio_renderer);
 }
 
-extern "C" void video_flush(void *cls) {
+extern "C" void video_flush(void *cls)
+{
   video_renderer_flush(video_renderer);
 }
 
-extern "C" void audio_set_volume(void *cls, float volume) {
+extern "C" void audio_set_volume(void *cls, float volume)
+{
   if (audio_renderer != NULL) {
     audio_renderer_set_volume(audio_renderer, volume);
   }
 }
 
-extern "C" void log_callback(void *cls, int level, const char *msg) {
+extern "C" void log_callback(void *cls, int level, const char *msg)
+{
   switch (level) {
     case LOGGER_DEBUG: {
       LOGD("%s", msg);
@@ -226,7 +306,8 @@ extern "C" void log_callback(void *cls, int level, const char *msg) {
 }
 
 int start_server(std::vector<char> hw_addr, std::string name, background_mode_t background_mode,
-                 audio_device_t audio_device, bool low_latency, bool debug_log) {
+                 audio_device_t audio_device, bool low_latency, bool debug_log)
+{
   raop_callbacks_t raop_cbs;
   memset(&raop_cbs, 0, sizeof(raop_cbs));
   raop_cbs.conn_init = conn_init;
@@ -287,7 +368,8 @@ int start_server(std::vector<char> hw_addr, std::string name, background_mode_t 
   return 0;
 }
 
-int stop_server() {
+int stop_server()
+{
   raop_destroy(raop);
   dnssd_unregister_raop(dnssd);
   dnssd_unregister_airplay(dnssd);
