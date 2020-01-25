@@ -152,6 +152,7 @@ HWND GetConsoleHwnd()
 static unsigned char *sharedData;
 static int *sharedDataLen;
 static int *frameType;
+static uint64_t *sharedPTS;
 
 int main(int argc, char *argv[])
 {
@@ -160,6 +161,7 @@ int main(int argc, char *argv[])
   sharedData = (unsigned char *) malloc(200000);
   sharedDataLen = new int(-1);
   frameType = new int(-1);
+  sharedPTS = new uint64_t();
 
   std::cout << "sharedDataLen ptr: " << static_cast<void*>(sharedDataLen) << std::endl;
   std::cout << "sharedData ptr: " << static_cast<void*>(sharedData) << std::endl;
@@ -169,7 +171,8 @@ int main(int argc, char *argv[])
   ptrFile.open ("pointers.txt");
   ptrFile << static_cast<void*>(sharedDataLen) << "\n";
   ptrFile << static_cast<void*>(sharedData) << "\n";
-  ptrFile << static_cast<void*>(frameType);
+  ptrFile << static_cast<void*>(frameType) << "\n";
+  ptrFile << static_cast<void*>(sharedPTS);
   ptrFile.close();
 
   init_signals();
@@ -258,6 +261,7 @@ extern "C" void video_process(void *cls, raop_ntp_t *ntp, h264_decode_struct *da
 {
   *sharedDataLen = data->data_len;
   *frameType = data->frame_type;
+  *sharedPTS = data->pts;
   memcpy(sharedData, data->data, data->data_len);
 
   video_renderer_render_buffer(video_renderer, ntp, data->data, data->data_len, data->pts, data->frame_type);
