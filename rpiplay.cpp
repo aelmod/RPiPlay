@@ -149,32 +149,9 @@ HWND GetConsoleHwnd()
   return (hwndFound);
 }
 
-static unsigned char *sharedData;
-static int *sharedDataLen;
-static int *frameType;
-static uint64_t *sharedPTS;
-
 int main(int argc, char *argv[])
 {
 //  GetConsoleHwnd();
-
-  sharedData = (unsigned char *) malloc(200000);
-  sharedDataLen = new int(-1);
-  frameType = new int(-1);
-  sharedPTS = new uint64_t();
-
-  std::cout << "sharedDataLen ptr: " << static_cast<void*>(sharedDataLen) << std::endl;
-  std::cout << "sharedData ptr: " << static_cast<void*>(sharedData) << std::endl;
-  std::cout << "frameType ptr: " << static_cast<void*>(frameType) << std::endl;
-
-  std::ofstream ptrFile;
-  ptrFile.open ("pointers.txt");
-  ptrFile << static_cast<void*>(sharedDataLen) << "\n";
-  ptrFile << static_cast<void*>(sharedData) << "\n";
-  ptrFile << static_cast<void*>(frameType) << "\n";
-  ptrFile << static_cast<void*>(sharedPTS);
-  ptrFile.close();
-
   init_signals();
 
   background_mode_t background = DEFAULT_BACKGROUND_MODE;
@@ -245,8 +222,7 @@ extern "C" void conn_init(void *cls)
 
 extern "C" void conn_destroy(void *cls)
 {
-  *sharedDataLen = -1;
-  *frameType = -1;
+
   video_renderer_update_background(video_renderer, -1);
 }
 
@@ -259,11 +235,6 @@ extern "C" void audio_process(void *cls, raop_ntp_t *ntp, aac_decode_struct *dat
 
 extern "C" void video_process(void *cls, raop_ntp_t *ntp, h264_decode_struct *data)
 {
-  *sharedDataLen = data->data_len;
-  *frameType = data->frame_type;
-  *sharedPTS = data->pts;
-  memcpy(sharedData, data->data, data->data_len);
-
   video_renderer_render_buffer(video_renderer, ntp, data->data, data->data_len, data->pts, data->frame_type);
 }
 
