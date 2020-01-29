@@ -8,7 +8,7 @@
 #define MAX_SIZE 200000
 
 struct h264_data {
-  h264_data(std::string data, int dataLen, uint64_t pts, int type)
+  h264_data(std::string data = "", int dataLen = -1, uint64_t pts = -1, int type = -1)
       : data(std::move(data)), data_len(dataLen), pts(pts), type(type) {}
 
   std::string data;
