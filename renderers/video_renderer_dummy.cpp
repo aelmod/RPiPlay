@@ -28,8 +28,9 @@
 #include "h264-bitstream/h264_stream.h"
 #include <boost/interprocess/ipc/message_queue.hpp>
 #include <boost/archive/text_oarchive.hpp>
+#include <boost/interprocess/managed_shared_memory.hpp>
+#include <boost/move/unique_ptr.hpp>
 #include <iostream>
-
 
 using namespace boost::interprocess;
 
@@ -37,16 +38,28 @@ struct video_renderer_s {
   logger_t *logger;
 };
 
-message_queue frames_queue
-    (
-        open_or_create,
-        "frames_queue",
-        100,
-        MAX_SIZE
-    );
+static const char *const FIRST_FRAME_SHARED_MEMORY = "FirstFrameSharedMemory";
+
+message_queue *frames_queue = nullptr;
+managed_shared_memory *segment = nullptr;
+
+using FirstFrame = std::pair<std::string, int>;
 
 video_renderer_t *video_renderer_init(logger_t *logger, background_mode_t background_mode, bool low_latency) {
+  message_queue::remove("frames_queue");
+
+  frames_queue = new message_queue(
+      open_or_create,
+      "frames_queue",
+      100,
+      MAX_SIZE
+  );
+
+  shared_memory_object::remove(FIRST_FRAME_SHARED_MEMORY);
+  segment = new managed_shared_memory(create_only, FIRST_FRAME_SHARED_MEMORY, 65536);
+
   video_renderer_t *renderer;
+
   renderer = (video_renderer_t *) calloc(1, sizeof(video_renderer_t));
   if (!renderer) {
     return NULL;
@@ -61,8 +74,17 @@ void video_renderer_start(video_renderer_t *renderer) {
 void video_renderer_render_buffer(video_renderer_t *renderer, raop_ntp_t *ntp, unsigned char *data, int data_len,
                                   uint64_t pts, int type) {
 
+
   std::ostringstream os;
   os << data;
+
+  if (type == 0) {
+    segment->construct<FirstFrame>
+        ("FirstFrame instance")
+        (os.str(), data_len);
+    return;
+  }
+
   h264_data frame(os.str(), data_len, pts, type);
 
   std::stringstream oss;
@@ -72,7 +94,7 @@ void video_renderer_render_buffer(video_renderer_t *renderer, raop_ntp_t *ntp, u
 
   std::string serialized_string(oss.str());
 
-  frames_queue.send(serialized_string.data(), serialized_string.size(), 0);
+  frames_queue->send(serialized_string.data(), serialized_string.size(), 0);
 }
 
 void video_renderer_flush(video_renderer_t *renderer) {
