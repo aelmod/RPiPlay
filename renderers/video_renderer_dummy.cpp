@@ -46,8 +46,7 @@ managed_shared_memory *segment = nullptr;
 using FirstFrame = std::pair<int *, int>;
 
 
-video_renderer_t *video_renderer_init(logger_t *logger, background_mode_t background_mode, bool low_latency)
-{
+video_renderer_t *video_renderer_init(logger_t *logger, background_mode_t background_mode, bool low_latency) {
   message_queue::remove("frames_queue");
 
   frames_queue = new message_queue(
@@ -87,6 +86,7 @@ video_renderer_t *video_renderer_init(logger_t *logger, background_mode_t backgr
   memcpy(addr, ttt, sizeof(int *));
   memcpy((int *) addr + sizeof(int), ttt2, sizeof(int *));
 
+
 //  addr = ttt;
 //  *addr = *firstFrame;
 
@@ -122,19 +122,28 @@ video_renderer_t *video_renderer_init(logger_t *logger, background_mode_t backgr
   return renderer;
 }
 
-void video_renderer_start(video_renderer_t *renderer)
-{
+void video_renderer_start(video_renderer_t *renderer) {
 }
 
 void video_renderer_render_buffer(video_renderer_t *renderer, raop_ntp_t *ntp, unsigned char *data, int data_len,
-                                  uint64_t pts, int type)
-{
-//  if (type == 0) {
-//    segment->construct<FirstFrame>
-//        ("FirstFrame instance")
-//        (os.str(), data_len);
-//    return;
-//  }
+                                  uint64_t pts, int type) {
+  if (type == 0) {
+    segment->destroy<unsigned char *>("FirstFrameData");
+    segment->construct<unsigned char *>
+        ("FirstFrameData")
+        (data);
+
+    std::cout << static_cast<void *>(data) << std::endl;
+
+    segment->destroy<int>("FirstFrameDataLen");
+    segment->construct<int>
+        ("FirstFrameDataLen")
+        (data_len);
+
+    std::cout << data_len << std::endl;
+
+    return;
+  }
 
   std::ostringstream os;
   os << data;
@@ -151,18 +160,15 @@ void video_renderer_render_buffer(video_renderer_t *renderer, raop_ntp_t *ntp, u
   frames_queue->send(serialized_string.data(), serialized_string.size(), 0);
 }
 
-void video_renderer_flush(video_renderer_t *renderer)
-{
+void video_renderer_flush(video_renderer_t *renderer) {
 }
 
-void video_renderer_destroy(video_renderer_t *renderer)
-{
+void video_renderer_destroy(video_renderer_t *renderer) {
   if (renderer) {
     free(renderer);
   }
 }
 
-void video_renderer_update_background(video_renderer_t *renderer, int type)
-{
+void video_renderer_update_background(video_renderer_t *renderer, int type) {
 
 }
