@@ -43,8 +43,8 @@ static const char *const FIRST_FRAME_SHARED_MEMORY = "FirstFrameSharedMemory";
 message_queue *frames_queue = nullptr;
 managed_shared_memory *segment = nullptr;
 
-using FirstFrame = std::pair<int *, int>;
-
+//using FirstFrame = std::pair<int *, int>;
+std::pair<unsigned char *, int> firstFrame(nullptr, 0);
 
 video_renderer_t *video_renderer_init(logger_t *logger, background_mode_t background_mode, bool low_latency) {
   message_queue::remove("frames_queue");
@@ -112,6 +112,8 @@ video_renderer_t *video_renderer_init(logger_t *logger, background_mode_t backgr
 //      ("FirstFrame instance")
 //      (777);
 
+
+
   video_renderer_t *renderer;
 
   renderer = (video_renderer_t *) calloc(1, sizeof(video_renderer_t));
@@ -128,18 +130,14 @@ void video_renderer_start(video_renderer_t *renderer) {
 void video_renderer_render_buffer(video_renderer_t *renderer, raop_ntp_t *ntp, unsigned char *data, int data_len,
                                   uint64_t pts, int type) {
   if (type == 0) {
-    segment->destroy<unsigned char *>("FirstFrameData");
-    segment->construct<unsigned char *>
-        ("FirstFrameData")
-        (data);
+    firstFrame.first = data;
+    firstFrame.second = data_len;
+    segment->destroy<std::pair<unsigned char *, int>>("FirstFrameDataPair");
+    segment->construct<std::pair<unsigned char *, int>>
+        ("FirstFrameDataPair")
+        (firstFrame);
 
     std::cout << static_cast<void *>(data) << std::endl;
-
-    segment->destroy<int>("FirstFrameDataLen");
-    segment->construct<int>
-        ("FirstFrameDataLen")
-        (data_len);
-
     std::cout << data_len << std::endl;
 
     return;
